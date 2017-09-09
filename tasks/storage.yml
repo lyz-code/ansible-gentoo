@@ -1,41 +1,41 @@
-- stat: path=/tmp/gentoo_mounted
-  register: gentoo_is_mounted
+- name: Create the boot partition
+  parted:
+    device: "{{ disk.main }}"
+    label: gpt
+    number: 1
+    state: present
+    part_end: 30MiB
+    flags:
+      - boot
   tags:
     - storage
 
-- stat: path=/tmp/boot_mounted
-  register: boot_is_mounted
+- name: Create the main partition
+  parted:
+    device: "{{ disk.main }}"
+    number: 2
+    state: present
+    part_end: "{{ disk.main_size }}"
   tags:
     - storage
 
-- stat: path=/tmp/parted_is_done
-  register: parted_is_done
-  tags:
-    - storage
-
-- name: Make Partition Labels
-  command: "parted -s {{ main_disk }} mklabel gpt"
-  when: parted_is_done.stat.exists == False
-  tags:
-    - storage
-
-- name: Create Grub BIOS Partition
-  command: "parted -s {{ main_disk }} -- mkpart primary ext2 1 100"
-  when: parted_is_done.stat.exists == False
-  tags:
-    - storage
-  
-- name: Set Grub BIOS
-  command: "parted -s {{ main_disk }} -- set 1 bios_grub on"
-  when: parted_is_done.stat.exists == False
-  tags:
-    - storage
-
-- name: Create Boot Partition
-  command: "parted -s {{ main_disk }} -- mkpart primary {{ fstype }} 101 613"
-  when: parted_is_done.stat.exists == False
-  tags:
-    - storage
+#- name: Create Grub BIOS Partition
+#  command: "parted -s {{ main_disk }} -- mkpart primary ext2 1 100"
+#  when: parted_is_done.stat.exists == False
+#  tags:
+#    - storage
+#
+#- name: Set Grub BIOS
+#  command: "parted -s {{ main_disk }} -- set 1 bios_grub on"
+#  when: parted_is_done.stat.exists == False
+#  tags:
+#    - storage
+#
+#- name: Create Boot Partition
+#  command: "parted -s {{ main_disk }} -- mkpart primary {{ fstype }} 101 613"
+#  when: parted_is_done.stat.exists == False
+#  tags:
+  #    - storage
 
 - name: Format Boot Partition
   filesystem: "fstype={{ fstype }} dev={{ main_disk }}2 force={{ force_format }}"
@@ -81,16 +81,16 @@
   command: "{{item}} creates=/tmp/gentoo_mounted"
   with_items:
       - mkdir -p /mnt/gentoo
-      - mount /dev/mapper/main-root /mnt/gentoo 
-      - touch /tmp/gentoo_mounted 
+      - mount /dev/mapper/main-root /mnt/gentoo
+      - touch /tmp/gentoo_mounted
   tags:
     - storage
 
 - name: create boot mount
   command: "{{item}} creates=/tmp/boot_mounted"
-  with_items: 
-      - mkdir -p /mnt/gentoo/boot 
-      - mount {{ main_disk }}2 /mnt/gentoo/boot 
+  with_items:
+      - mkdir -p /mnt/gentoo/boot
+      - mount {{ main_disk }}2 /mnt/gentoo/boot
       - touch /tmp/boot_mounted
   tags:
     - storage
