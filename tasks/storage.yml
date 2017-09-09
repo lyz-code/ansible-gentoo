@@ -10,6 +10,13 @@
   tags:
     - storage
 
+- name: Shred the boot partition
+
+- name: Format the boot partition
+  filesystem:
+    fstype: ext2
+    dev: "{{ disk.main }}1"
+
 - name: Create the main partition
   parted:
     device: "{{ disk.main }}"
@@ -19,6 +26,12 @@
   tags:
     - storage
 
+- name: Shred the main partition
+
+- name: Format the main partition
+  filesystem:
+    fstype: ext4
+    dev: "{{ disk.main }}2"
 #- name: Create Grub BIOS Partition
 #  command: "parted -s {{ main_disk }} -- mkpart primary ext2 1 100"
 #  when: parted_is_done.stat.exists == False
