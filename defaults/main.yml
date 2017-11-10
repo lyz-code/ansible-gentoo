@@ -9,12 +9,27 @@ disk:
   encrypt_with_luks: true
   luks_password: changeme
 
-
 mirror: http://mirror.mdfnet.se/gentoo
+
+portage:
+  cflags: -march=native -O2 -pipe
+  cxxflags: ${CFLAGS}
+  chost: x86_64-pc-linux-gnu
+  use: bindist dbus alsa -X -gnome -dvd -cdr -ipv6 -systemd -gtk -gtk3
+  cpu_flags_x86: mmx sse sse2 mmxext
+  makeopts: -j{{ ansible_processor_count + 1 }}
+  features: sandbox parallel-fetch candy userfetch webrsync-gpg
+  portage_gpg_dir: /var/lib/gentoo/gkeys/keyrings/gentoo/release
+
+gentoo_gpg_keys:
+  - 0xBB572E0E2D182910
+  - 0xDB6B8C1F96D8BF6D
+  - 0x9E6438C817072058
+
+
 timezone: America/Los_Angeles
 domain: met.tfoundry.com
 kernel: config-3.13.0-24-generic
-make_opts: -j4
 management_interface: "{{ ansible_default_ipv4.interface }}"
 root_passwd: gentoo-root
 gateway: "{{ ansible_default_ipv4.gateway }}"

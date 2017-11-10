@@ -1,0 +1,120 @@
+# Yeah I know it's cheating, but ntpd always changes even though you run it
+# consecutively
+- name: Correct the date
+  command: ntpd -q -g
+  changed_when: false
+  tags:
+    - stage3
+
+- name: Get the latest hardened stage3
+  shell: curl -s http://distfiles.gentoo.org/releases/amd64/autobuilds/latest-stage3.txt | egrep "stage3-amd64-hardened-[0-9]+" | cut -d ' ' -f1
+  changed_when: false
+  register: latest_stage3
+  tags:
+    - stage3
+
+- name: Download the latest hardened stage3 digest
+  get_url:
+    url: {{ mirror }}/releases/amd64/autobuilds/{{ latest_stage3.stdout }}.DIGESTS
+    dest: /mnt/gentoo/stage3.tar.bz2.DIGESTS
+  tags:
+    - stage3
+
+- name: Download the latest hardened stage3 digest signature
+  get_url:
+    url: {{ mirror }}/releases/amd64/autobuilds/{{ latest_stage3.stdout }}.DIGESTS.asc
+    dest: /mnt/gentoo/stage3.tar.bz2.DIGESTS.asc
+  tags:
+    - stage3
+
+- name: Verify the DIGEST file
+  command: gpg --verify /mnt/gentoo/stage3.tar.bz2.DIGESTS.asc
+  changed_when: false
+  tags:
+    - stage3
+
+- name: Register the SHA512 sum of the stage3
+  shell: grep -A1 SHA512 stage3-amd64-hardened-20171109.tar.bz2.DIGESTS | grep "tar.bz2$" | cut -d ' ' -f1
+  changed_when: false
+  register: stage3_sha512
+  tags:
+    - stage3
+
+- name: Download the latest hardened stage3
+  get_url:
+    url: {{ mirror }}/releases/amd64/autobuilds/{{ latest_stage3.stdout }}
+    dest: /mnt/gentoo/stage3.tar.bz2
+    checksum: "sha512:{{ stage3_sha512.stdout }}"
+  tags:
+    - stage3
+
+# Maybe there are problems, we need to:
+#  * preserve permissions
+#  * include the extended attributes
+#  * ensure that the user and group IDs of the files being extracted from the
+#    tarball will remain the same as the Gentoo release engineering team
+#    intended, even if adventurous users are not using official Gentoo
+#    installation media.
+# The default wiki command was:
+#   tar xvjpf stage3-*.tar.bz2 --xattrs --numeric-owner
+#
+# Check it [here](https://wiki.gentoo.org/wiki/Handbook:AMD64/Installation/Stage)
+
+- name: Unarchive stage3 tarball
+  unarchive:
+    src: /mnt/gentoo/stage3.tar.bz2
+    dest: /mnt/gentoo
+    remote_src: yes
+  tags:
+    - stage3
+
+# This assumes that the gentoo developers keys are in the live usb, if I have
+# not yet created the live with those keys give me a ping, or create a docker
+# in other computer, emerge it and copy the files.
+
+- name: Copy the GPG Gentoo developer keys to the new environment
+  copy:
+    src: /var/lib/gentoo/gkeys
+    dest: /mnt/gentoo/var/lib/gentoo/
+    remote_src: yes
+  tags:
+    - stage3
+
+- name: Create the repos directory
+  file:
+    path: /mnt/gentoo/etc/portage/repos.conf
+    type: directory
+    owner: root
+    group: root
+  tags:
+    - stage3
+
+- name: Configure the repository
+  copy:
+    src: gentoo.conf
+    dest: /mnt/gentoo/etc/portage/repos.conf/gentoo.conf
+    owner: root
+    group: root
+  tags:
+    - stage3
+
+# This task is not idempotent :(, I should test if it's already trusted
+- name: Trust the developers keys
+  expect:
+    command: gpg --homedir /mnt/gentoo/var/lib/gentoo/gkeys/keyrings/gentoo/release --edit-key {{ item }} trust
+    responses:
+      gpg>: 4
+      gpg>: quit
+  with_items: gentoo_gpg_keys
+  tags:
+    - stage3
+
+- name: Configure the compile options
+  template:
+    src:  make.conf
+    dest: /mnt/gentoo/etc/portage/make.conf
+    owner: root
+    group: root
+    mode: '0600'
+  tags:
+    - stage3

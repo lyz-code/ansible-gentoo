@@ -30,15 +30,45 @@ The role defines several defaults that an be overridden by the user
   * `filesystem`: Filesystem of the main partition (Default: `ext4`)
   * `encrypt_with_luks`: Encrypt with LUKS the main device and swap (Default:
     `true`)
+* `mirror`: The mirror to fetch the gentoo stage3 sources from.(Default:
+  http://mirror.mdfnet.se/gentoo)
+
+
+* `portage`: Dictionary with information of portage
+  For more information setting this flags, read the
+  [PORTDIR](https://wiki.gentoo.org/wiki//etc/portage/make.conf#PORTDIR) article
+  * `cflags`: Optimization flags for GCC C (Default: `-march=native -O2 -pipe`)
+    Although the [GCC
+    optimization](https://wiki.gentoo.org/wiki/GCC_optimization) article has
+    more information on how the various compilation options can affect a system,
+    the Safe [CFLAGS](https://wiki.gentoo.org/wiki/Safe_CFLAGS) article may be
+    a more practical place for beginners to start optimizing their systems.
+  * `cxxflags`: Optimization flags for GCC C++ (Default: `${CFLAGS}`)
+  * `chost`: Tells portage which platform code should be built for (Default:
+    `x86_64-pc-linux-gnu`). Should not be changed lightly, for more information
+    check [this](http://www.gentoo.org/doc/en/change-chost.xml)
+  * `use`: Default use flags (Default: `bindist dbus alsa -X -gnome -dvd -cdr
+    -ipv6 -systemd -gtk -gtk3`)
+  * `cpu_flags_x86`: Informs Portage about the CPU flags (features) permitted by
+    the CPU (Default: `mmx sse sse2 mmxext`)
+  * `makeopts`: Used to specify arguments passed to make when packages are built
+    from source (Default: `-j{{ ansible_processor_count + 1 }}`)
+  * `features`: Contains a list of Portage features that the user wants enabled
+    on the system, effectively influencing Portage's behavior (Default: `sandbox
+    parallel-fetch candy userfetch webrsync-gpg`).
+
+    For more information, please see [Portage
+    features](https://wiki.gentoo.org/wiki/Handbook:AMD64/Working/Features) in
+    the Gentoo Handbook and the
+    [FEATURES](https://wiki.gentoo.org/wiki/FEATURES) article. For a complete
+    list of available features, see man 5 make.conf.
+  * `portage_gpg_dir`: Directory where the gpg keys are stored to verify the
+    downloaded trees (Default: `/var/lib/gentoo/gkeys/keyrings/gentoo/release`)
 
 pubkey
     The public key to deploy to the root user on the *minimal cd*. Primarily to
     negate the need for a password if you need to run twice.
     default: ~/.ssh/id_rsa.pub
-
-mirror
-    The mirror to fetch the gentoo stage3 sources from.
-    default: http://mirror.mcs.anl.gov/pub/gentoo
 
 timezone
     The timezone to set for the new system.
@@ -85,7 +115,15 @@ netmask
 * Format the LVM partitions
 * Mount them
 
-##
+## Stage3
+* Correct the date with `ntpd`
+* Download the stage3
+* Verify it's integrity with gpg and sha512
+* Configure the verification of the portage tree with gpg
+* Configure compile options (`/etc/portage/make.conf`)
+
+## Base system
+
 Example Playbook
 ----------------
 
