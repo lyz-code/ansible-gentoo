@@ -104,6 +104,15 @@
   tags:
     - storage
 
+- name: Umount the boot partition
+  mount:
+    path: /mnt/boot
+    src: "{{ disk.main }}1"
+    fstype: ext2
+    state: absent
+  tags:
+    - storage
+
 - name: Create the main LVM volume group
   lvg:
     vg: crypt
@@ -164,3 +173,8 @@
   when: disk.encrypt_with_luks
   tags:
     - storage
+
+- name: Mark the storage phase as finished
+  file:
+    path: /mnt/gentoo/storage.completed
+    state: present

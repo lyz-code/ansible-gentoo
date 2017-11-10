@@ -118,3 +118,8 @@
     mode: '0600'
   tags:
     - stage3
+
+- name: Mark the stage3 phase as finished
+  file:
+    path: /mnt/gentoo/stage3.completed
+    state: present

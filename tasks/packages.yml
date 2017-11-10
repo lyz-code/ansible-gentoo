@@ -1,3 +1,5 @@
+# XXX maybe emerge here app-crypt/gentoo-keys???
+
 - name: Install Miscellaneous Packages
   command: chroot /mnt/gentoo bash -c 'source /etc/profile; emerge {{ item.name }}' creates={{ item.creates }}
   with_items:

@@ -1,6 +1,5 @@
 ---
 # defaults file for ansible-gentoo
-pubkey: ~/.ssh/id_ed25519.pub
 disk:
   main: /dev/sda
   main_size: 100%
@@ -8,9 +7,7 @@ disk:
   filesystem: ext4
   encrypt_with_luks: true
   luks_password: changeme
-
 mirror: http://mirror.mdfnet.se/gentoo
-
 portage:
   cflags: -march=native -O2 -pipe
   cxxflags: ${CFLAGS}
@@ -20,17 +17,17 @@ portage:
   makeopts: -j{{ ansible_processor_count + 1 }}
   features: sandbox parallel-fetch candy userfetch webrsync-gpg
   portage_gpg_dir: /var/lib/gentoo/gkeys/keyrings/gentoo/release
-
 gentoo_gpg_keys:
   - 0xBB572E0E2D182910
   - 0xDB6B8C1F96D8BF6D
   - 0x9E6438C817072058
+timezone: Europe/Brussels
+hostname: create-a-super-nice-name
 
-
-timezone: America/Los_Angeles
 domain: met.tfoundry.com
 kernel: config-3.13.0-24-generic
 management_interface: "{{ ansible_default_ipv4.interface }}"
+pubkey: ~/.ssh/id_ed25519.pub
 root_passwd: gentoo-root
 gateway: "{{ ansible_default_ipv4.gateway }}"
 netmask: "{{ ansible_default_ipv4.netmask }}"

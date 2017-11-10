@@ -1,6 +1,6 @@
 # ansible-gentoo
 
-This role demonstrates the automatic configuration of a gentoo system from
+This playbook demonstrates the automatic configuration of a gentoo system from
 minimal install to first boot.
 
 First record the gentoo iso in your USB, connect it to the desired device and
@@ -18,8 +18,7 @@ shred -uv {{ main_disk }}
 This role is not tested for `disk.encrypt_with_luks == false` so it won't work,
 the path is open for you to make a Merge request :)
 
-Role Variables
---------------
+# Role Variables
 
 The role defines several defaults that an be overridden by the user
 
@@ -29,7 +28,7 @@ The role defines several defaults that an be overridden by the user
   * `swap_size`: Size of the swap partition (Default: `4GiB`)
   * `filesystem`: Filesystem of the main partition (Default: `ext4`)
   * `encrypt_with_luks`: Encrypt with LUKS the main device and swap (Default:
-    `true`)
+    `true`) **You have to change this**
 * `mirror`: The mirror to fetch the gentoo stage3 sources from.(Default:
   http://mirror.mdfnet.se/gentoo)
 
@@ -64,15 +63,16 @@ The role defines several defaults that an be overridden by the user
     list of available features, see man 5 make.conf.
   * `portage_gpg_dir`: Directory where the gpg keys are stored to verify the
     downloaded trees (Default: `/var/lib/gentoo/gkeys/keyrings/gentoo/release`)
+* `timezone`: The timezone to set for the new system  (Default:
+  `Europe/Brussels`)
+* `hostname`: Hostname for the new system (Default: `create-a-super-nice-name`)
+  **You have to change this**
 
 pubkey
     The public key to deploy to the root user on the *minimal cd*. Primarily to
     negate the need for a password if you need to run twice.
     default: ~/.ssh/id_rsa.pub
 
-timezone
-    The timezone to set for the new system.
-    default: America/Los_Angeles
 
 domain
     main domain for the new system
@@ -122,7 +122,11 @@ netmask
 * Configure the verification of the portage tree with gpg
 * Configure compile options (`/etc/portage/make.conf`)
 
+## Base system unchrooted
+* Mount the required mountpoints
+
 ## Base system
+* Update the `@world`
 
 Example Playbook
 ----------------

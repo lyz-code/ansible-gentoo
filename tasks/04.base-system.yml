@@ -1,0 +1,77 @@
+- name: Create portage directory
+  file:
+    path: /mnt/gentoo/usr/portage
+    type: directory
+    user: root
+    group: root
+  tags:
+    - base-system
+
+- name: Create the metadata directory
+  file:
+    path: /usr/portage/metadata
+    type: directory
+    user: root
+    group: root
+  tags:
+    - base-system
+
+- name: Copy the layout.conf
+  copy:
+    src: layout.conf
+    dest: /usr/portage/metadata/layout.conf
+    user: root
+  tags:
+    - base-system
+
+# If this task fails is because gpg is not yet installed in the stage3. I need
+# to make a custom stage3 with gpg installed because I don't know why Gentoo
+# decided it's not important enough. Therefore your first portage sync doesn't
+# check the gpg signatures... Nice ugh?!
+
+- name: Update the world
+  portage:
+    package: '@world'
+    update: yes
+    deep: yes
+    sync: web
+    newuse: yes
+  tags:
+    - base-system
+
+- name: Set the timezone
+  copy:
+    src: /usr/share/zoneinfo/{{ timezone }}
+    dest: /etc/timezone
+  register: timezone_status
+  tags:
+    - base-system
+
+- name: Reconfigure the timezone
+  command: emerge --config sys-libs/timezone-data
+  when: timezone_status.changed == True
+  tags:
+    - base-system
+
+- name: Check if the hostname is the default
+  fail:
+    - msg: You didn't change the default hostname... You deserve to die
+  when: hostname == create-a-super-nice-name
+  tags:
+    - base-system
+
+- name: Set Hostname
+  hostname:
+    name: "{{ hostname }}"
+  tags:
+    - base-system
+
+- name: Set hostname permanent
+  template: src=hostname dest=/mnt/gentoo/etc/conf.d/hostname
+  tags:
+    - base-system
+
+- name: Mark the base system phase as finished
+  file:
+    path: /mnt/gentoo/base-system.completed
+    state: present

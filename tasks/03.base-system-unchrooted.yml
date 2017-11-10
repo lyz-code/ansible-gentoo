@@ -1,0 +1,30 @@
+- name: Copy the DNS information
+  copy:
+    src: /etc/resolv.conf
+    dest: /mnt/gentoo/etc/resolv.conf
+    owner: root
+    group: root
+    mode: '0600'
+  tags:
+    - base-system-unchrooted
+
+- name: Mount proc
+  mount:
+    path: /mnt/gentoo/proc
+    src: /proc
+    state: present
+    opts: proc
+  tags:
+    - base-system-unchrooted
+
+- name: Mount dev and sys
+  mount:
+    path: /mnt/gentoo/{{ item }}
+    src: /{{ item }}
+    state: present
+    opts: bind
+  with_items:
+    - dev
+    - sys
+  tags:
+    - base-system-unchrooted

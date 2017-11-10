@@ -1,0 +1,80 @@
+---
+# tasks file for ansible-gentoo
+
+- hosts: localhost
+  connection: local
+  tasks:
+    # Storage
+    - name: Test if storage phase is finished
+      stat:
+        path: /mnt/gentoo/storage.completed
+      register: storage_status
+
+    - name: Configure the disks layout
+      include_tasks: 01.storage.yml
+      when: storage_status.stat.exists == False
+
+    # Stage3
+    - name: Test if stage3 phase is finished
+      stat:
+        path: /mnt/gentoo/stage3.completed
+      register: stage3_status
+
+    - name: Installing the Gentoo installation files
+      include_tasks: 02.stage3.yml
+      when: stage3_status.stat.exists == False
+
+    # Base system unchrooted
+    - name: Installing the Gentoo base system
+      include_tasks: 03.base-system-unchrooted.yml
+
+- hosts: chroot
+  connection: chroot
+  tasks:
+    # Base system
+    - name: Test if base system phase is finished
+      stat:
+        path: /mnt/gentoo/base-system.completed
+      register: base-system_status
+
+    - name: Installing the Gentoo base system
+      include_tasks: 04.base-system.yml
+      when: base-system_status.stat.exists == False
+
+    # Kernel
+    - name: Test if kernel phase is finished
+      stat:
+        path: /mnt/gentoo/kernel.completed
+      register: kernel_status
+
+    - name: Configuring the linux kernel
+      include_tasks: kernel.yml
+      when: kernel_status.stat.exists == False
+
+    # System
+    - name: Test if system phase is finished
+      stat:
+        path: /mnt/gentoo/system.completed
+      register: system_status
+
+    - name: Configuring the system
+      include_tasks: system.yml
+      when: system_status.stat.exists == False
+      # - include: networking.yml
+      # - include: system.yml
+
+    # System tools
+    - name: Test if system phase is finished
+      stat:
+        path: /mnt/gentoo/system-tools.completed
+      register: system_status
+
+    - name: Installing system tools
+      include_tasks: system-tools.yml
+      when: system-tools_status.stat.exists == False
+      # - include: packages.yml
+      #
+# - include: reboot.yml
+# - include_tasks: clean.yml
+#     * /stage3*
+#     * /*completed
