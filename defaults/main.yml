@@ -3,10 +3,12 @@
 pubkey: ~/.ssh/id_ed25519.pub
 disk:
   main: /dev/sda
-  main_size: 50GiB
+  main_size: 100%
   swap_size: 4GiB
   filesystem: ext4
-  force_format: no
+  encrypt_with_luks: true
+  luks_password: changeme
+
 
 mirror: http://mirror.mdfnet.se/gentoo
 timezone: America/Los_Angeles

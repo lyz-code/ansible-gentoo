@@ -1,21 +1,21 @@
 - name: Create the boot partition
   parted:
     device: "{{ disk.main }}"
-    label: gpt
+    label: mbr
     number: 1
     state: present
-    part_end: 30MiB
+    part_end: 50MiB
     flags:
       - boot
   tags:
     - storage
 
-- name: Shred the boot partition
-
 - name: Format the boot partition
   filesystem:
     fstype: ext2
     dev: "{{ disk.main }}1"
+  tags:
+    - storage
 
 - name: Create the main partition
   parted:
@@ -26,84 +26,141 @@
   tags:
     - storage
 
-- name: Shred the main partition
+- name: Format the main partition
+  filesystem:
+    fstype: "{{ disk.filesystem }}"
+    dev: "{{ disk.main }}"
+  tags:
+    - storage
+
+- name: Load the required modules for encryption
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - dm-crypt
+    - aes
+    - sha512
+  when: disk.encrypt_with_luks
+  tags:
+    - storage
+
+- name: Test if the partition is already a luks volume
+  command: cryptsetup isLuks "{{ disk.main }}2"
+  register: isluks
+  changed_when: false
+  when: disk.encrypt_with_luks
+  tags:
+    - storage
+
+- name: Check if the luks password is changed
+  fail:
+    - msg: You didn't change the luks default password... You deserve to die
+  when: disk.luks_password == changeme
+  tags:
+    - storage
+
+# XXX Change command module to expect
+- name: Encrypt the partition
+  command: cryptsetup luksFormat --debug -i 15000 -c aes-xts-plain64:sha512 -s 512 {{ disk.main }}2
+  when:
+    - disk.encrypt_with_luks
+    - isluks.rc != 0
+  tags:
+    - storage
+
+- name: Create the /mnt/boot directory
+  file:
+    path: /mnt/boot
+    state: directory
+    owner: root
+    group: root
+    mode: 0700
+  tags:
+    - storage
+
+- name: Mount the boot partition
+  mount:
+    path: /mnt/boot
+    src: "{{ disk.main }}1"
+    fstype: ext2
+    state: present
+  tags:
+    - storage
+
+- name: Open the encrypted partition
+  expect:
+    command: cryptsetup luksOpen {{ disk.main }}2 crypt
+    responses:
+      Enter passphrase for: {{ luks.password }}
+  when: disk.encrypt_with_luks
+  tags:
+    - storage
+
+- name: Create backup of the luks header
+  command: cryptsetup luksHeaderBackup {{ disk.main }}2 --header-backup-file=/mnt/boot/luks-header
+  creates: /mnt/boot/luks-header
+  when: disk.encrypt_with_luks
+  tags:
+    - storage
+
+- name: Create the main LVM volume group
+  lvg:
+    vg: crypt
+    pvs: /dev/mapper/crypt
+    state: present
+  when: disk.encrypt_with_luks
+  tags:
+    - storage
+
+- name: Create the swap LVM logical volume
+  lvol:
+    vg: crypt
+    lv: swap
+    size: "{{ disk.swap_size }}"
+  when: disk.encrypt_with_luks
+  tags:
+    - storage
+
+- name: Create the main LVM logical volume
+  lvol:
+    vg: crypt
+    lv: root
+    size: 100%FREE
+  when: disk.encrypt_with_luks
+  tags:
+    - storage
 
 - name: Format the main partition
   filesystem:
+    fstype: "{{ disk.filesystem }}"
+    dev: /dev/mapper/crypt-root
+  when: disk.encrypt_with_luks
+  tags:
+    - storage
+
+- name: Format swap device
+  command: mkswap /dev/mapper/crypt-swap
+  when:
+    - disk.encrypt_with_luks
+    - ansible_swaptotal_mb < 1
+  tags:
+    - storage
+
+- name: Activate swap device
+  command: swapon /dev/mapper/crypt-swap
+  when:
+    - disk.encrypt_with_luks
+    - ansible_swaptotal_mb < 1
+  tags:
+    - storage
+
+- name: Mount the main partition
+  mount:
+    path: /mnt/gentoo
+    src: /dev/mapper/crypt-root
     fstype: ext4
-    dev: "{{ disk.main }}2"
-#- name: Create Grub BIOS Partition
-#  command: "parted -s {{ main_disk }} -- mkpart primary ext2 1 100"
-#  when: parted_is_done.stat.exists == False
-#  tags:
-#    - storage
-#
-#- name: Set Grub BIOS
-#  command: "parted -s {{ main_disk }} -- set 1 bios_grub on"
-#  when: parted_is_done.stat.exists == False
-#  tags:
-#    - storage
-#
-#- name: Create Boot Partition
-#  command: "parted -s {{ main_disk }} -- mkpart primary {{ fstype }} 101 613"
-#  when: parted_is_done.stat.exists == False
-#  tags:
-  #    - storage
-
-- name: Format Boot Partition
-  filesystem: "fstype={{ fstype }} dev={{ main_disk }}2 force={{ force_format }}"
-  tags:
-    - storage
-
-- name: Create Main Physical Disk
-  command: "parted -s {{ main_disk }} -- mkpart primary {{ fstype }} 614 -1"
-  when: parted_is_done.stat.exists == False
-  tags:
-    - storage
-
-- command: touch /tmp/parted_is_done
-
-- name: Create Main Volume Group
-  lvg: "pvs={{ main_disk }}3 vg=main"
-  tags:
-    - storage
-
-- name: Create Swap Volume
-  lvol: "lv=swap vg=main size={{ swap_size }}"
-  tags:
-    - storage
-
-- name: Rescan Volumes
-  command: vgscan
-
-- name: Update device mapper
-  command: vgchange -ay
-
-- name: Format Swap Volume
-  command: "mkswap /dev/mapper/main-swap"
-
-- name: Create root Volume
-  lvol: lv=root vg=main size=100%FREE
-  tags:
-    - storage
-
-- name: Format root Volume
-  filesystem: "fstype={{ fstype }} dev=/dev/mapper/main-root force={{ force_format }}"
-
-- name: create root mount
-  command: "{{item}} creates=/tmp/gentoo_mounted"
-  with_items:
-      - mkdir -p /mnt/gentoo
-      - mount /dev/mapper/main-root /mnt/gentoo
-      - touch /tmp/gentoo_mounted
-  tags:
-    - storage
-
-- name: create boot mount
-  command: "{{item}} creates=/tmp/boot_mounted"
-  with_items:
-      - mkdir -p /mnt/gentoo/boot
-      - mount {{ main_disk }}2 /mnt/gentoo/boot
-      - touch /tmp/boot_mounted
+    state: present
+  when: disk.encrypt_with_luks
   tags:
     - storage
