@@ -1,3 +1,5 @@
+**XXX add molecule with vagrant, kvm, empty vdi and attached usb with the live**
+
 # ansible-gentoo
 
 This playbook demonstrates the automatic configuration of a gentoo system from

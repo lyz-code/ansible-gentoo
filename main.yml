@@ -34,7 +34,7 @@
     # Base system
     - name: Test if base system phase is finished
       stat:
-        path: /mnt/gentoo/base-system.completed
+        path: /base-system.completed
       register: base-system_status
 
     - name: Installing the Gentoo base system
@@ -44,7 +44,7 @@
     # Kernel
     - name: Test if kernel phase is finished
       stat:
-        path: /mnt/gentoo/kernel.completed
+        path: /kernel.completed
       register: kernel_status
 
     - name: Configuring the linux kernel
@@ -54,7 +54,7 @@
     # System
     - name: Test if system phase is finished
       stat:
-        path: /mnt/gentoo/system.completed
+        path: /system.completed
       register: system_status
 
     - name: Configuring the system
@@ -66,7 +66,7 @@
     # System tools
     - name: Test if system phase is finished
       stat:
-        path: /mnt/gentoo/system-tools.completed
+        path: /system-tools.completed
       register: system_status
 
     - name: Installing system tools
